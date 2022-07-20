@@ -1,14 +1,19 @@
 package study.querydsl.repository;
 
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.ObjectUtils;
+import study.querydsl.dto.MemberJoinSearchCondition;
 import study.querydsl.dto.MemberSearchCondition;
 import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.dto.QMemberTeamDto;
@@ -18,7 +23,9 @@ import javax.persistence.EntityManager;
 import java.util.List;
 
 import static study.querydsl.entity.QMember.member;
+import static study.querydsl.entity.QPool.pool;
 import static study.querydsl.entity.QTeam.team;
+import static study.querydsl.entity.QZone.zone;
 
 public class MemberRepositoryImpl implements MemberRepositoryCustom {
 
@@ -106,6 +113,38 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         ageGoe(condition.getAgeGoe()),
                         ageLoe(condition.getAgeLoe()));
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchCount);
+    }
+
+    @Override
+    public Page<Member> searchMemberWithRegion(MemberJoinSearchCondition condition, Pageable pageable) {
+        JPAQuery<Member> jpaQuery = queryFactory
+                .select(member)
+                .from(member)
+                .leftJoin(member.team, team)
+                .leftJoin(zone).on(member.zoneId.eq(zone.id))
+                .leftJoin(pool).on(zone.poolId.eq(pool.id))
+                .where(regionEq(condition.getRegion()),
+                        teamNameEq(condition.getTeamName()))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize());
+
+        for (Sort.Order o : pageable.getSort()) {
+            String property = o.getProperty();
+            PathBuilder<?> pathBuilder;
+
+            if (property.equals("region")) {
+                pathBuilder = new PathBuilder<>(pool.getType(), pool.getMetadata());
+            } else {
+                pathBuilder = new PathBuilder<>(member.getType(), member.getMetadata());
+            }
+            jpaQuery.orderBy(new OrderSpecifier(o.isAscending() ? Order.ASC : Order.DESC, pathBuilder.get(o.getProperty())));
+        }
+
+        return PageableExecutionUtils.getPage(jpaQuery.fetch(), pageable, jpaQuery::fetchCount);
+    }
+
+    private BooleanExpression regionEq(String region) {
+        return ObjectUtils.isEmpty(region) ? null : pool.region.eq(region);
     }
 
     private BooleanExpression ageLoe(Integer ageLoe) {

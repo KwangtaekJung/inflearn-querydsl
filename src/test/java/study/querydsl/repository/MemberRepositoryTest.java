@@ -3,11 +3,17 @@ package study.querydsl.repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
+import study.querydsl.dto.MemberJoinSearchCondition;
 import study.querydsl.dto.MemberSearchCondition;
 import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.entity.Member;
+import study.querydsl.entity.Pool;
 import study.querydsl.entity.Team;
+import study.querydsl.entity.Zone;
 
 import javax.persistence.EntityManager;
 import java.util.List;
@@ -63,5 +69,46 @@ public class MemberRepositoryTest {
         List<MemberTeamDto> result = memberRepository.search(condition);
 
         assertThat(result).extracting("username").containsExactly("member4");
+    }
+
+    @Test
+    public void searchMemberWithRegionTest() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        member1.setZoneId("ZONE-Test0001");
+        Member member2 = new Member("member2", 20, teamA);
+        member2.setZoneId("ZONE-Test0002");
+        Member member3 = new Member("member3", 30, teamB);
+        member3.setZoneId("ZONE-Test0001");
+        Member member4 = new Member("member4", 40, teamB);
+        member4.setZoneId("ZONE-Test0002");
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+
+        Zone zone1 = new Zone("ZONE-Test0001", "POOL-Test0001");
+        Zone zone2 = new Zone("ZONE-Test0002", "POOL-Test0002");
+        em.persist(zone1);
+        em.persist(zone2);
+
+        Pool pool1 = new Pool("POOL-Test0001", "REGION-A");
+        Pool pool2 = new Pool("POOL-Test0002", "REGION-B");
+        em.persist(pool1);
+        em.persist(pool2);
+
+        MemberJoinSearchCondition condition = new MemberJoinSearchCondition();
+        condition.setTeamName("teamB");
+//        condition.setRegion("REGION-B");
+
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by("region"));
+//        PageRequest pageable = PageRequest.of(0, 10);
+        Page<Member> result = memberRepository.searchMemberWithRegion(condition, pageable);
+
+        assertThat(result).extracting("username").contains("member4");
     }
 }

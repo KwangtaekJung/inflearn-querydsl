@@ -32,6 +32,8 @@ public class Member {
     @JoinColumn(name = "team_id")
     private Team team;
 
+    private String zoneId;
+
     public Member(String username) {
         this(username, 0);
     }
