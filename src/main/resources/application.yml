@@ -26,7 +26,7 @@ logging.level:
   jdbc:
     sqlonly: info
     sqltiming: off
-    resultsettable: off #info
+    resultsettable: info
     audit: off
     resultset: off #info
     connection: off

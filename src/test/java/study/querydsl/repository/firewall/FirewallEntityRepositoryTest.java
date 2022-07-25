@@ -8,7 +8,10 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.annotation.Rollback;
+import study.querydsl.dto.FirewallSearchCondition;
 import study.querydsl.entity.firewall.FirewallEntity;
 import study.querydsl.entity.firewall.PoolEntity;
 import study.querydsl.entity.firewall.ZoneEntity;
@@ -91,5 +94,15 @@ class FirewallEntityRepositoryTest {
     public void findById2() {
         Optional<FirewallEntity> savedFirewallEntity = firewallEntityRepository.findById(FIREWALL_ID_2);
         savedFirewallEntity.ifPresent(System.out::println);
+    }
+
+    @Test
+    @DisplayName("200. searchPage")
+    @Transactional
+    public void search_basic() {
+        FirewallSearchCondition condition = new FirewallSearchCondition();
+        PageRequest pageable = PageRequest.of(0, 20);
+        Page<FirewallEntity> result = firewallEntityRepository.searchPageWithRegion(condition, pageable);
+        System.out.println(result.getContent());
     }
 }
